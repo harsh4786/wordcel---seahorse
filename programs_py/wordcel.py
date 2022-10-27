@@ -122,3 +122,10 @@ def follow(
  follow_account.authority = user_profile.key()
  follow_account.profile = profile_to_be_followed.key()
  follow_account.bump = follow.bump()
+
+# unfollow ix requires us to close accounts which isn't po
+#@instruction
+#def unfollow(
+   # user: Signer,
+   # follow_acc: Connection,
+#):
