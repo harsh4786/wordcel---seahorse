@@ -47,7 +47,9 @@ def create_post(
     metadata_uri: str, 
     profile: Profile, 
 ):
- assert ((user.key() == profile.authority) and (profile.random_hash != random_hash) and (profile.random_hash != metadata_uri)), "Invalid parameters"
+ assert ((user.key() == profile.authority) 
+ and (profile.random_hash != random_hash) 
+ and (profile.random_hash != metadata_uri)), "Invalid parameters"
  post_account = post.init(
     payer = user, 
     seeds = ['post', random_hash]
@@ -64,7 +66,7 @@ def update_post(
     profile: Profile, 
     post: Post,
 ):
-# since we have used strings in random_hash we have to do exhaustive checks
+# since we have used strings in random_hash i chose to do exhaustive sanity checks
 # this will change when seahorse supports array deserialization
  assert ((post.profile == profile.key()) 
     and (profile.random_hash != post.random_hash) 
@@ -76,5 +78,17 @@ def update_post(
 
  post.metadata_uri = metadata_uri
  
+ @instruction
+ def comment(
+    user: Signer, 
+    metadata_uri: str,
+    random_hash: str,
+    post: Post,
 
- 
+):
+  assert ((post.random_hash != random_hash) 
+   and (post.random_hash != metadata_uri
+   and (post.metadata_uri != metadata_uri)
+   and (random_hash != metadata_uri))), "Invalid parameters"
+
+  assert len(metadata_uri) > 128, "Uri length exceeded"
