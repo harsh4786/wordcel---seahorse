@@ -68,7 +68,8 @@ def update_post(
 ):
 # since we have used strings in random_hash i chose to do exhaustive sanity checks
 # this will change when seahorse supports array deserialization
- assert ((post.profile == profile.key()) 
+ assert ((post.profile == profile.key())
+    and (profile.authority == user.key())
     and (profile.random_hash != post.random_hash) 
     and (profile.random_hash != metadata_uri)
     and (post.random_hash != metadata_uri)
@@ -78,19 +79,25 @@ def update_post(
 
  post.metadata_uri = metadata_uri
  
- @instruction
- def comment(
+@instruction
+def comment(
     user: Signer, 
     metadata_uri: str,
     random_hash: str,
-    post: Empty[Post],  #since comments are just micro posts or replies it would need a post account
-
+    post: Empty[Post],
+    profile: Profile,  #since comments are just micro posts or replies it would need a post account
 ):
-  assert ((post.random_hash != random_hash) 
-   and (post.random_hash != metadata_uri
-   and (post.metadata_uri != metadata_uri)
-   and (random_hash != metadata_uri))), "Invalid parameters"
+  assert (((profile.authority == user.key()) 
+  and (random_hash != metadata_uri)
+  and (profile.random_hash != random_hash))), "Invalid parameters"
 
   assert len(metadata_uri) > 128, "Uri length exceeded"
 
-  comment_acc = post.init
+  comment_acc = post.init(
+    payer = user,
+    seeds =['comment', random_hash]
+  )
+  comment_acc.profile = profile.key()
+  comment_acc.bump = post.bump()
+  comment_acc.random_hash = random_hash
+  comment_acc.metadata_uri = metadata_uri
