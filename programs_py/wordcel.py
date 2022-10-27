@@ -101,3 +101,24 @@ def comment(
   comment_acc.bump = post.bump()
   comment_acc.random_hash = random_hash
   comment_acc.metadata_uri = metadata_uri
+
+@instruction
+def follow(
+    user: Signer, 
+    user_profile: Profile,
+    profile_to_be_followed: Profile,
+    follow: Empty[Connection],
+):
+ assert ((user_profile.authority == user.key()) 
+ and (user_profile.key() != profile_to_be_followed.key()
+ and (profile_to_be_followed.key() != user.key()))), "STOP CHEATING AND CHECK YOUR PROFILES !"
+
+#seems like passing raw pubkeys as seeds is  
+# not yet supported in seahorse v0.2.2
+ follow_account = follow.init(
+    payer = user,
+    seeds = ['connection', user, 'follows'],
+ )
+ follow_account.authority = user_profile.key()
+ follow_account.profile = profile_to_be_followed.key()
+ follow_account.bump = follow.bump()
