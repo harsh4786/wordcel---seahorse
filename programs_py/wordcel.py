@@ -83,7 +83,7 @@ def update_post(
     user: Signer, 
     metadata_uri: str,
     random_hash: str,
-    post: Post,
+    post: Empty[Post],  #since comments are just micro posts or replies it would need a post account
 
 ):
   assert ((post.random_hash != random_hash) 
@@ -92,3 +92,5 @@ def update_post(
    and (random_hash != metadata_uri))), "Invalid parameters"
 
   assert len(metadata_uri) > 128, "Uri length exceeded"
+
+  comment_acc = post.init
