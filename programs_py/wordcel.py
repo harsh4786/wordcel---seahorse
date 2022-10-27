@@ -5,7 +5,6 @@
 from seahorse.prelude import *
 declare_id('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS')
 
-MAX_LEN_URI: u64 = 128 
 class Profile(Account):
     authority: Pubkey
     bump: u8
@@ -72,5 +71,10 @@ def update_post(
     and (profile.random_hash != metadata_uri)
     and (post.random_hash != metadata_uri)
     and (post.metadata_uri != metadata_uri)), "Invalid parameters"
+
+ assert len(metadata_uri) > 128, "Uri length exceeded"
+
+ post.metadata_uri = metadata_uri
+ 
 
  
