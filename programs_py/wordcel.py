@@ -76,7 +76,6 @@ def update_post(
     and (post.metadata_uri != metadata_uri)), "Invalid parameters"
 
  assert len(metadata_uri) > 128, "Uri length exceeded"
-
  post.metadata_uri = metadata_uri
  
 @instruction
@@ -123,7 +122,7 @@ def follow(
  follow_account.profile = profile_to_be_followed.key()
  follow_account.bump = follow.bump()
 
-# unfollow ix requires us to close accounts which isn't po
+# unfollow ix requires us to close accounts which isn't possible yet on seahorse
 #@instruction
 #def unfollow(
    # user: Signer,
