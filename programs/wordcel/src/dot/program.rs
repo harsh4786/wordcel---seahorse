@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
-use crate::{assign, index_assign, seahorse_util::*};
+use crate::{id, seahorse_util::*};
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use std::{cell::RefCell, rc::Rc};
@@ -55,57 +55,6 @@ pub struct LoadedConnection<'info, 'entrypoint> {
     pub profile: Pubkey,
     pub authority: Pubkey,
     pub bump: u8,
-}
-
-#[account]
-#[derive(Debug)]
-pub struct Profile {
-    pub authority: Pubkey,
-    pub bump: u8,
-    pub random_hash: String,
-}
-
-impl<'info, 'entrypoint> Profile {
-    pub fn load(
-        account: &'entrypoint mut Box<Account<'info, Self>>,
-        programs_map: &'entrypoint ProgramsMap<'info>,
-    ) -> Mutable<LoadedProfile<'info, 'entrypoint>> {
-        let authority = account.authority.clone();
-        let bump = account.bump;
-        let random_hash = account.random_hash.clone();
-
-        Mutable::new(LoadedProfile {
-            __account__: account,
-            __programs__: programs_map,
-            authority,
-            bump,
-            random_hash,
-        })
-    }
-
-    pub fn store(loaded: Mutable<LoadedProfile>) {
-        let mut loaded = loaded.borrow_mut();
-        let authority = loaded.authority.clone();
-
-        loaded.__account__.authority = authority;
-
-        let bump = loaded.bump;
-
-        loaded.__account__.bump = bump;
-
-        let random_hash = loaded.random_hash.clone();
-
-        loaded.__account__.random_hash = random_hash;
-    }
-}
-
-#[derive(Debug)]
-pub struct LoadedProfile<'info, 'entrypoint> {
-    pub __account__: &'entrypoint mut Box<Account<'info, Profile>>,
-    pub __programs__: &'entrypoint ProgramsMap<'info>,
-    pub authority: Pubkey,
-    pub bump: u8,
-    pub random_hash: String,
 }
 
 #[account]
@@ -167,6 +116,57 @@ pub struct LoadedPost<'info, 'entrypoint> {
     pub random_hash: String,
 }
 
+#[account]
+#[derive(Debug)]
+pub struct Profile {
+    pub authority: Pubkey,
+    pub bump: u8,
+    pub random_hash: String,
+}
+
+impl<'info, 'entrypoint> Profile {
+    pub fn load(
+        account: &'entrypoint mut Box<Account<'info, Self>>,
+        programs_map: &'entrypoint ProgramsMap<'info>,
+    ) -> Mutable<LoadedProfile<'info, 'entrypoint>> {
+        let authority = account.authority.clone();
+        let bump = account.bump;
+        let random_hash = account.random_hash.clone();
+
+        Mutable::new(LoadedProfile {
+            __account__: account,
+            __programs__: programs_map,
+            authority,
+            bump,
+            random_hash,
+        })
+    }
+
+    pub fn store(loaded: Mutable<LoadedProfile>) {
+        let mut loaded = loaded.borrow_mut();
+        let authority = loaded.authority.clone();
+
+        loaded.__account__.authority = authority;
+
+        let bump = loaded.bump;
+
+        loaded.__account__.bump = bump;
+
+        let random_hash = loaded.random_hash.clone();
+
+        loaded.__account__.random_hash = random_hash;
+    }
+}
+
+#[derive(Debug)]
+pub struct LoadedProfile<'info, 'entrypoint> {
+    pub __account__: &'entrypoint mut Box<Account<'info, Profile>>,
+    pub __programs__: &'entrypoint ProgramsMap<'info>,
+    pub authority: Pubkey,
+    pub bump: u8,
+    pub random_hash: String,
+}
+
 pub fn comment_handler<'info>(
     mut user: SeahorseSigner<'info, '_>,
     mut metadata_uri: String,
@@ -180,7 +180,7 @@ pub fn comment_handler<'info>(
         panic!("Invalid parameters");
     }
 
-    if !((metadata_uri.len() as u64) > 128) {
+    if !((metadata_uri.chars().count() as u64) > 128) {
         panic!("Uri length exceeded");
     }
 
@@ -226,6 +226,20 @@ pub fn create_post_handler<'info>(
     assign!(post_account.borrow_mut().bump, post.bump.unwrap());
 }
 
+pub fn create_profile_handler<'info>(
+    mut user: SeahorseSigner<'info, '_>,
+    mut random_hash: String,
+    mut profile: Empty<Mutable<LoadedProfile<'info, '_>>>,
+) -> () {
+    let mut profile_ = profile.account.clone();
+
+    assign!(profile_.borrow_mut().authority, user.key());
+
+    assign!(profile_.borrow_mut().random_hash, random_hash);
+
+    assign!(profile_.borrow_mut().bump, profile.bump.unwrap());
+}
+
 pub fn follow_handler<'info>(
     mut user: SeahorseSigner<'info, '_>,
     mut user_profile: Mutable<LoadedProfile<'info, '_>>,
@@ -255,20 +269,6 @@ pub fn follow_handler<'info>(
     assign!(follow_account.borrow_mut().bump, follow.bump.unwrap());
 }
 
-pub fn create_profile_handler<'info>(
-    mut user: SeahorseSigner<'info, '_>,
-    mut random_hash: String,
-    mut profile: Empty<Mutable<LoadedProfile<'info, '_>>>,
-) -> () {
-    let mut profile_ = profile.account.clone();
-
-    assign!(profile_.borrow_mut().authority, user.key());
-
-    assign!(profile_.borrow_mut().random_hash, random_hash);
-
-    assign!(profile_.borrow_mut().bump, profile.bump.unwrap());
-}
-
 pub fn update_post_handler<'info>(
     mut user: SeahorseSigner<'info, '_>,
     mut metadata_uri: String,
@@ -285,7 +285,7 @@ pub fn update_post_handler<'info>(
         panic!("Invalid parameters");
     }
 
-    if !((metadata_uri.len() as u64) > 128) {
+    if !((metadata_uri.chars().count() as u64) > 128) {
         panic!("Uri length exceeded");
     }
 

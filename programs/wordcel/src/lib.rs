@@ -17,6 +17,9 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 pub mod seahorse_util {
     use super::*;
+
+    #[cfg(feature = "pyth-sdk-solana")]
+    pub use pyth_sdk_solana::{load_price_feed_from_account_info, PriceFeed};
     use std::{collections::HashMap, fmt::Debug, ops::Deref};
 
     pub struct Mutable<T>(Rc<RefCell<T>>);
@@ -55,7 +58,7 @@ pub mod seahorse_util {
 
     impl<T: Clone> Mutable<Vec<T>> {
         pub fn wrapped_index(&self, mut index: i128) -> usize {
-            if index > 0 {
+            if index >= 0 {
                 return index.try_into().unwrap();
             }
 
@@ -67,7 +70,7 @@ pub mod seahorse_util {
 
     impl<T: Clone, const N: usize> Mutable<[T; N]> {
         pub fn wrapped_index(&self, mut index: i128) -> usize {
-            if index > 0 {
+            if index >= 0 {
                 return index.try_into().unwrap();
             }
 
@@ -121,6 +124,19 @@ pub mod seahorse_util {
     }
 
     #[macro_export]
+    macro_rules! seahorse_const {
+        ($ name : ident , $ value : expr) => {
+            macro_rules! $name {
+                () => {
+                    $value
+                };
+            }
+
+            pub(crate) use $name;
+        };
+    }
+
+    #[macro_export]
     macro_rules! assign {
         ($ lval : expr , $ rval : expr) => {{
             let temp = $rval;
@@ -138,6 +154,12 @@ pub mod seahorse_util {
             $lval[temp_idx] = temp_rval;
         };
     }
+
+    pub(crate) use assign;
+
+    pub(crate) use index_assign;
+
+    pub(crate) use seahorse_const;
 }
 
 #[program]
@@ -155,8 +177,8 @@ mod wordcel {
         pub post: Box<Account<'info, dot::program::Post>>,
         #[account(mut)]
         pub profile: Box<Account<'info, dot::program::Profile>>,
-        pub system_program: Program<'info, System>,
         pub rent: Sysvar<'info, Rent>,
+        pub system_program: Program<'info, System>,
     }
 
     pub fn comment(ctx: Context<Comment>, metadata_uri: String, random_hash: String) -> Result<()> {
@@ -204,8 +226,8 @@ mod wordcel {
         pub post: Box<Account<'info, dot::program::Post>>,
         #[account(mut)]
         pub profile: Box<Account<'info, dot::program::Profile>>,
-        pub system_program: Program<'info, System>,
         pub rent: Sysvar<'info, Rent>,
+        pub system_program: Program<'info, System>,
     }
 
     pub fn create_post(
@@ -244,6 +266,43 @@ mod wordcel {
         dot::program::Post::store(post.account);
 
         dot::program::Profile::store(profile);
+
+        return Ok(());
+    }
+
+    #[derive(Accounts)]
+    # [instruction (random_hash : String)]
+    pub struct CreateProfile<'info> {
+        #[account(mut)]
+        pub user: Signer<'info>,
+        # [account (init , space = std :: mem :: size_of :: < dot :: program :: Profile > () + 8 , payer = user , seeds = ["profile" . as_bytes () . as_ref () , random_hash . as_bytes () . as_ref ()] , bump)]
+        pub profile: Box<Account<'info, dot::program::Profile>>,
+        pub rent: Sysvar<'info, Rent>,
+        pub system_program: Program<'info, System>,
+    }
+
+    pub fn create_profile(ctx: Context<CreateProfile>, random_hash: String) -> Result<()> {
+        let mut programs = HashMap::new();
+
+        programs.insert(
+            "system_program",
+            ctx.accounts.system_program.to_account_info(),
+        );
+
+        let programs_map = ProgramsMap(programs);
+        let user = SeahorseSigner {
+            account: &ctx.accounts.user,
+            programs: &programs_map,
+        };
+
+        let profile = Empty {
+            account: dot::program::Profile::load(&mut ctx.accounts.profile, &programs_map),
+            bump: ctx.bumps.get("profile").map(|bump| *bump),
+        };
+
+        create_profile_handler(user.clone(), random_hash, profile.clone());
+
+        dot::program::Profile::store(profile.account);
 
         return Ok(());
     }
@@ -299,43 +358,6 @@ mod wordcel {
         dot::program::Profile::store(profile_to_be_followed);
 
         dot::program::Connection::store(follow.account);
-
-        return Ok(());
-    }
-
-    #[derive(Accounts)]
-    # [instruction (random_hash : String)]
-    pub struct CreateProfile<'info> {
-        #[account(mut)]
-        pub user: Signer<'info>,
-        # [account (init , space = std :: mem :: size_of :: < dot :: program :: Profile > () + 8 , payer = user , seeds = ["profile" . as_bytes () . as_ref () , random_hash . as_bytes () . as_ref ()] , bump)]
-        pub profile: Box<Account<'info, dot::program::Profile>>,
-        pub system_program: Program<'info, System>,
-        pub rent: Sysvar<'info, Rent>,
-    }
-
-    pub fn create_profile(ctx: Context<CreateProfile>, random_hash: String) -> Result<()> {
-        let mut programs = HashMap::new();
-
-        programs.insert(
-            "system_program",
-            ctx.accounts.system_program.to_account_info(),
-        );
-
-        let programs_map = ProgramsMap(programs);
-        let user = SeahorseSigner {
-            account: &ctx.accounts.user,
-            programs: &programs_map,
-        };
-
-        let profile = Empty {
-            account: dot::program::Profile::load(&mut ctx.accounts.profile, &programs_map),
-            bump: ctx.bumps.get("profile").map(|bump| *bump),
-        };
-
-        create_profile_handler(user.clone(), random_hash, profile.clone());
-
-        dot::program::Profile::store(profile.account);
 
         return Ok(());
     }

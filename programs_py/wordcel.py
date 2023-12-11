@@ -1,5 +1,5 @@
 # wordcel
-# Built with Seahorse v0.2.2
+# Built with Seahorse v0.2.7
 
 
 from seahorse.prelude import *
@@ -94,7 +94,7 @@ def comment(
 
   comment_acc = post.init(
     payer = user,
-    seeds =['comment', random_hash]
+    seeds =['comment', random_hash],
   )
   comment_acc.profile = profile.key()
   comment_acc.bump = post.bump()
@@ -112,7 +112,7 @@ def follow(
  and (user_profile.key() != profile_to_be_followed.key()
  and (profile_to_be_followed.key() != user.key()))), "STOP CHEATING AND CHECK YOUR PROFILES !"
 
-#seems like passing raw pubkeys as seeds is  
+# seems like passing raw pubkeys as seeds is  
 # not yet supported in seahorse v0.2.2
  follow_account = follow.init(
     payer = user,
@@ -123,8 +123,18 @@ def follow(
  follow_account.bump = follow.bump()
 
 # unfollow ix requires us to close accounts which isn't possible yet on seahorse
-#@instruction
-#def unfollow(
-   # user: Signer,
-   # follow_acc: Connection,
-#):
+# Update: Closing program accounts hasn't been fixed in v0.2.7 as shown in this open issue:
+# https://github.com/ameliatastic/seahorse-lang/issues/44
+
+# @instruction
+# def unfollow(
+#    user: Signer,
+#    follow_acc: Connection,
+#    profile_to_be_unfollowed: Profile,
+# ):
+#  assert ((follow_acc.authority == user.key()))
+#  assert (profile_to_be_unfollowed.authority != user.key), "The unfollower and the unfollowed cannot be the same!" 
+ 
+#  unfollow = follow_acc
+
+   
